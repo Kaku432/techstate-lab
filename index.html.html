@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Why Do Saved Instagram Reels Silently Disappear? | TechState Lab</title>
+  <meta name="description" content="An investigative computer science deep dive into silent bookmark state loss on Instagram Reels—even when the original video remains live and public." />
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- =====================================================================
+       GOOGLE ADSENSE INTEGRATION HEAD SNIPPET
+       Replace ca-pub-XXXXXXXXXXXXXXXX with your approved Google AdSense ID
+       ===================================================================== -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+
+  <style>
+    /* Custom subtle grid background for simulated AdSense containers */
+    .ad-slot-pattern {
+      background-image: radial-gradient(rgba(148, 163, 184, 0.25) 1px, transparent 1px);
+      background-size: 14px 14px;
+    }
+    .dark .ad-slot-pattern {
+      background-image: radial-gradient(rgba(100, 116, 139, 0.25) 1px, transparent 1px);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200 font-sans antialiased transition-colors duration-200">
+
+  <!-- Reading Progress Bar -->
+  <div class="fixed top-0 left-0 right-0 h-1 z-50 bg-transparent">
+    <div id="reading-progress" class="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 w-0 transition-all duration-100"></div>
+  </div>
+
+  <!-- Sticky Top Navigation Bar -->
+  <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <!-- Brand Logo -->
+      <a href="#" class="flex items-center gap-2.5 group focus:outline-none">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-mono font-bold text-lg shadow-sm group-hover:scale-105 transition-transform">
+          TS
+        </div>
+        <div>
+          <span class="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">TechState</span>
+          <span class="font-semibold text-lg tracking-tight text-blue-600 dark:text-blue-400">Lab</span>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
+        <a href="#standard-explanations" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">The Myth</a>
+        <a href="#contradiction-proof" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Visual Proof</a>
+        <a href="#cs-root-causes" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">CS Root Causes</a>
+        <a href="#interactive-simulator" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Live Simulator</a>
+      </nav>
+
+      <!-- Action Controls: AdSense Studio & Dark Mode -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- AdSense Setup & Preview Drawer Trigger -->
+        <button id="open-adsense-modal" type="button" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer">
+          <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>AdSense Studio</span>
+          <span id="ad-status-pill" class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono uppercase rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">ON</span>
+        </button>
+
+        <!-- Dark / Light Mode Toggle -->
+        <button id="theme-toggle" type="button" aria-label="Toggle Dark Mode" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg id="icon-sun" class="w-5 h-5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <!-- Moon Icon (shown in light mode) -->
+          <svg id="icon-moon" class="w-5 h-5 block dark:hidden text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       TOP LEADERBOARD ADSENSE SLOT (728x90 / Responsive)
+       ===================================================================== -->
+  <div class="ad-container max-w-5xl mx-auto px-4 sm:px-6 pt-6 transition-all duration-300">
+    <div class="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/70 ad-slot-pattern p-3 text-center">
+      <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 dark:text-slate-500 mb-1.5 px-1">
+        <span>ADVERTISEMENT • TOP LEADERBOARD</span>
+        <span class="ad-meta-display">pub: ca-pub-XXXXXXXXXXXXXXXX | slot: 1122334455</span>
+      </div>
+      <!-- Actual Google AdSense Responsive Unit -->
+      <ins class="adsbygoogle block"
+           style="display:block"
+           data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+           data-ad-slot="1122334455"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <!-- Simulated Preview Banner (Visible until real AdSense fills slot) -->
+      <div class="ad-preview-box rounded-xl bg-gradient-to-r from-slate-100 via-blue-50 to-slate-100 dark:from-slate-800/80 dark:via-blue-950/40 dark:to-slate-800/80 border border-slate-200 dark:border-slate-700 py-4 px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="text-left">
+          <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-600 text-white mb-1">AdSense Preview</span>
+          <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Responsive Display Leaderboard (728×90 / Mobile 320×100)</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">High-visibility header placement — automatically adapts to screen width.</p>
+        </div>
+        <button type="button" onclick="openAdSenseModal()" class="shrink-0 px-3.5 py-2 rounded-lg bg-slate-900 dark:bg-blue-600 text-white text-xs font-semibold hover:opacity-90 transition cursor-pointer">
+          Configure Slot
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Layout: Article + Sticky Sidebar -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+
+      <!-- Left / Main Article Column (8 cols) -->
+      <article class="lg:col-span-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 sm:p-10 lg:p-12">
+
+        <!-- Article Header -->
+        <header class="border-b border-slate-200 dark:border-slate-800 pb-8 mb-8">
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              Systems Investigation
+            </span>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+              HCI &amp; Distributed State
+            </span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 ml-auto font-mono">
+              7 min read • Updated Nov 2026
+            </span>
+          </div>
+
+          <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight mb-4">
+            Why Do Saved Instagram Reels Silently Disappear? (Even When the Video Isn't Deleted)
+          </h1>
+
+          <p class="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+            Standard tech support claims your bookmarked Reels vanish because creators delete their posts. Direct UI forensics prove otherwise: videos remain live with hundreds of thousands of likes while your bookmark silently resets itself.
+          </p>
+
+          <!-- Author Metadata -->
+          <div class="flex items-center justify-between flex-wrap gap-4 pt-2">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
+                TL
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900 dark:text-white">TechState Research Desk</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Independent Computer Science &amp; Platform Forensics</div>
+              </div>
+            </div>
+            <button id="copy-article-link" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span id="copy-link-label">Copy Article Link</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Article Body -->
+        <div class="space-y-8 text-base sm:text-[17px] leading-relaxed text-slate-700 dark:text-slate-300">
+
+          <p>
+            If you use Instagram's <strong>Saved</strong> feature as a personal archive for recipes, workout routines, coding tips, or movie clips, you have likely experienced a frustrating mystery: you tap the bookmark icon on a Reel, confirm it turns solid black or white, and return three days later only to find it completely gone from your Saved folder.
+          </p>
+
+          <p>
+            When users search for why this happens, search engines and help forums repeat the exact same four explanations. Yet when you actually track down the missing Reel via direct link or search, you discover something startling—<strong>the Reel is still online, completely public, and untouched.</strong>
+          </p>
+
+          <!-- SECTION 1: Standard Explanations -->
+          <section id="standard-explanations" class="scroll-mt-24 pt-2">
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-4">
+              1. The Conventional Explanations (And Where They Fall Short)
+            </h2>
+            <p class="mb-5">
+              Because Instagram's bookmarking tool saves a relational database pointer (linking your <code class="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400">user_id</code> to a <code class="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400">media_id</code>) rather than downloading the video file, conventional troubleshooting guides blame content removal or user error:
+            </p>
+
+            <!-- Clean Visual UI Mockup of Standard Troubleshooting Criteria -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 p-5 sm:p-6 shadow-inner my-6">
+              <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                  <span class="text-xs font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Standard Help Documentation Summary</span>
+                </div>
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">Artifact A</span>
+              </div>
+              <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-3">
+                Why some saved Instagram Reels disappear from your saved reels
+              </h3>
+              <ul class="space-y-3 text-sm sm:text-base">
+                <li class="flex items-start gap-3">
+                  <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-800 dark:bg-slate-300 shrink-0"></span>
+                  <div>
+                    <strong class="text-slate-900 dark:text-white">Original Post Deleted:</strong> If the creator deletes the reel, every user's bookmark becomes invalid, and the reel vanishes from your saved tab.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-800 dark:bg-slate-300 shrink-0"></span>
+                  <div>
+                    <strong class="text-slate-900 dark:text-white">Account Deactivated or Deleted:</strong> If the creator's account is deactivated or deleted, all their posts, including the saved reels, disappear from your saved tab.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-800 dark:bg-slate-300 shrink-0"></span>
+                  <div>
+                    <strong class="text-slate-900 dark:text-white">Accidental Unsaved:</strong> If you accidentally double-tap the bookmark icon, it removes the save immediately, with no confirmation or undo.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-800 dark:bg-slate-300 shrink-0"></span>
+                  <div>
+                    <strong class="text-slate-900 dark:text-white">App Cache Issues:</strong> Sometimes, saved posts appear to vanish due to a cache glitch in the app, especially after an app update or when switching between multiple Instagram accounts on the same device.
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <p>
+              While those four points sound plausible on paper, cross-checking Instagram's actual user interface behavior reveals a glaring contradiction.
+            </p>
+          </section>
+
+          <!-- =====================================================================
+               IN-ARTICLE NATIVE ADSENSE SLOT
+               ===================================================================== -->
+          <div class="ad-container my-8 transition-all duration-300">
+            <div class="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 ad-slot-pattern p-4">
+              <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 dark:text-slate-500 mb-2">
+                <span>ADVERTISEMENT • IN-ARTICLE FLUID UNIT</span>
+                <span class="ad-meta-display">pub: ca-pub-XXXXXXXXXXXXXXXX | slot: 6677889900</span>
+              </div>
+              <ins class="adsbygoogle block"
+                   style="display:block; text-align:center;"
+                   data-ad-layout="in-article"
+                   data-ad-format="fluid"
+                   data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                   data-ad-slot="6677889900"></ins>
+              <div class="ad-preview-box rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-11 h-11 rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-mono font-bold text-sm shrink-0">
+                    AD
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Native In-Article Placement</div>
+                    <div class="text-sm font-semibold text-slate-900 dark:text-white">Highest CTR Editorial Ad Slot (Fluid Native)</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">Blends naturally between article sections for optimal reader engagement.</div>
+                  </div>
+                </div>
+                <button type="button" onclick="openAdSenseModal()" class="shrink-0 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
+                  Edit Slot ID
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 2: The Contradiction / Visual Proof -->
+          <section id="contradiction-proof" class="scroll-mt-24 pt-2">
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-4">
+              2. The Forensic Proof: Deleted Posts vs. Live Un-Saved Reels
+            </h2>
+            <p class="mb-6">
+              To test whether missing bookmarks are caused by upstream post deletion, we compared how Instagram handles an <em>actually</em> deleted or private post against a Reel that quietly vanished from a user's Saved collection.
+            </p>
+
+            <!-- Side-by-Side Comparison Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+
+              <!-- Card A: Actual Deleted/Private Post UI Mockup -->
+              <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-5 flex flex-col justify-between shadow-sm">
+                <div>
+                  <div class="flex items-center justify-between mb-4">
+                    <span class="px-2.5 py-1 rounded-md text-xs font-mono font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300">
+                      Case A: Truly Deleted / Private
+                    </span>
+                    <span class="text-xs font-mono text-slate-400">HTTP 404 / 403</span>
+                  </div>
+
+                  <!-- Realistic Instagram "Message unavailable" UI Bubble Mockup -->
+                  <div class="my-6 flex items-center justify-center">
+                    <div class="w-full max-w-xs rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
+                      <div class="font-semibold text-[15px] text-slate-900 dark:text-white mb-1.5">
+                        Message unavailable
+                      </div>
+                      <p class="text-[13.5px] leading-snug text-slate-500 dark:text-slate-400">
+                        This content may have been deleted by its owner or hidden by their privacy settings.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
+                  <strong class="text-slate-900 dark:text-slate-200">System Behavior:</strong> Instagram explicitly renders an access-revocation notice when a creator deletes media or locks their profile.
+                </div>
+              </div>
+
+              <!-- Card B: The Live Batman Begins Reel Case Study -->
+              <div class="rounded-2xl border-2 border-blue-500/40 dark:border-blue-500/40 bg-white dark:bg-slate-950 p-5 flex flex-col justify-between shadow-sm">
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="px-2.5 py-1 rounded-md text-xs font-mono font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300">
+                      Case B: Live Public Reel
+                    </span>
+                    <span class="text-xs font-mono text-blue-600 dark:text-blue-400 font-semibold">Silent Regression</span>
+                  </div>
+
+                  <!-- Simulated Instagram Post Forensics Card -->
+                  <div class="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-900 text-white my-3">
+                    <!-- Simulated Video Frame -->
+                    <div class="relative bg-gradient-to-br from-stone-900 via-neutral-800 to-stone-950 p-5 flex flex-col justify-between min-h-[145px]">
+                      <div class="flex items-center justify-between text-[11px] text-slate-300/80 font-mono">
+                        <span>REEL • @cinema.archives</span>
+                        <span class="px-1.5 py-0.5 rounded bg-black/50 text-emerald-400">● PUBLIC / LIVE</span>
+                      </div>
+                      <div class="my-3 text-center">
+                        <p class="font-sans font-extrabold tracking-wide text-sm sm:text-base text-white drop-shadow">
+                          "YOU CAN DECIDE WHO'S..."
+                        </p>
+                        <p class="text-[11px] text-slate-300 mt-1">
+                          🎬 Batman Begins (2005) • IMDb 8.2/10 • Dir. Christopher Nolan
+                        </p>
+                      </div>
+                      <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                        <span>#batmanbegins #brucewayne</span>
+                        <span>🔊 Audio Active</span>
+                      </div>
+                    </div>
+
+                    <!-- Simulated Instagram Action Bar & Interactive Bookmark Inspection -->
+                    <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-3.5 border-t border-slate-200 dark:border-slate-800">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3.5 text-slate-800 dark:text-slate-200">
+                          <!-- Heart -->
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                          <!-- Comment -->
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                          <!-- Share -->
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        </div>
+
+                        <!-- Interactive Bookmark Toggle Demonstration -->
+                        <button id="demo-bookmark-btn" type="button" title="Click to toggle save state" class="relative group flex items-center gap-1.5 px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 cursor-pointer">
+                          <span id="demo-bookmark-badge" class="text-[10px] font-mono font-bold uppercase">Hollow (Unsaved!)</span>
+                          <svg id="demo-bookmark-icon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold">122K likes</span>
+                        <span class="text-slate-400 font-mono text-[11px]">Posted October 19</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
+                  <strong class="text-slate-900 dark:text-slate-200">Forensic Finding:</strong> The <em>Batman Begins</em> clip (122K likes, Oct 19) remained 100% live and public, yet its bookmark icon silently reverted to an unfilled state.
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/70 p-5 text-sm sm:text-base">
+              <strong class="text-blue-900 dark:text-blue-300 block mb-1">Key Takeaway:</strong>
+              Because the video payload, caption metadata, and 122,000 likes remained publicly accessible, upstream deletion is ruled out. The failure occurred strictly inside the <strong>user-to-media bookmark state layer</strong>.
+            </div>
+          </section>
+
+          <!-- SECTION 3: 3 Computer Science & HCI Root Causes -->
+          <section id="cs-root-causes" class="scroll-mt-24 pt-2">
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-4">
+              3. Three Computer Science &amp; HCI Root Causes
+            </h2>
+            <p class="mb-6">
+              When a bookmark disappears while the underlying post stays live, three architectural patterns in modern mobile engineering explain what actually happened behind the scenes:
+            </p>
+
+            <div class="space-y-5">
+              <!-- Root Cause 1 -->
+              <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 bg-slate-50/50 dark:bg-slate-800/30">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="w-7 h-7 rounded-lg bg-blue-600 text-white font-mono font-bold text-sm flex items-center justify-center shrink-0">01</span>
+                  <h3 class="text-lg font-bold text-slate-900 dark:text-white">Optimistic UI Updates &amp; Dropped Write Requests</h3>
+                </div>
+                <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300">
+                  To make mobile apps feel instantaneous, engineers use <strong>Optimistic UI</strong> rendering. When you tap the bookmark icon, the app immediately fills the icon on your screen <em>before</em> receiving an <code class="font-mono text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">HTTP 200 OK</code> confirmation from Meta's servers. If your cellular connection hiccups, or if you swipe the app closed milliseconds later, the asynchronous <code class="font-mono text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">POST /api/v1/media/save</code> packet is dropped—leaving you with a false-positive save that vanishes on the next sync.
+                </p>
+              </div>
+
+              <!-- Root Cause 2 -->
+              <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 bg-slate-50/50 dark:bg-slate-800/30">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-mono font-bold text-sm flex items-center justify-center shrink-0">02</span>
+                  <h3 class="text-lg font-bold text-slate-900 dark:text-white">Eventual Consistency in Distributed Databases</h3>
+                </div>
+                <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300">
+                  At multi-billion-user scale, platforms rely on distributed, <strong>eventually consistent</strong> data stores. When you switch between multiple Instagram accounts on the same phone or jump from the mobile app to a desktop browser, a read-replica that hasn't received your latest write can serve stale <code class="font-mono text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">is_saved: false</code> metadata, overwriting your local cache with the older state.
+                </p>
+              </div>
+
+              <!-- Root Cause 3 -->
+              <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 bg-slate-50/50 dark:bg-slate-800/30">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="w-7 h-7 rounded-lg bg-cyan-600 text-white font-mono font-bold text-sm flex items-center justify-center shrink-0">03</span>
+                  <h3 class="text-lg font-bold text-slate-900 dark:text-white">Unguarded Single-Tap Toggle Affordances (HCI Flaw)</h3>
+                </div>
+                <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300">
+                  From a Human-Computer Interaction (HCI) standpoint, Instagram's bookmark button is an unguarded boolean toggle (<code class="font-mono text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">saved = !saved</code>). While zero-friction tapping is great for <em>saving</em> content, applying zero friction to <em>un-saving</em>—without a confirmation toast or <code class="font-mono text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">[Undo]</code> snackbar—means a stray thumb graze while scrolling silently destroys your bookmark.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <!-- SECTION 4: Interactive Bookmark Persistence Simulator -->
+          <section id="interactive-simulator" class="scroll-mt-24 pt-4">
+            <div class="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-900 text-slate-100 p-6 sm:p-8 shadow-xl">
+              <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-6">
+                <div>
+                  <span class="inline-block text-[11px] font-mono font-semibold uppercase tracking-wider text-cyan-400 mb-1">Interactive Lab Widget</span>
+                  <h2 class="text-xl sm:text-2xl font-bold text-white">Bookmark Persistence Simulator</h2>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-mono bg-slate-800 text-slate-300 border border-slate-700">
+                  Client ↔ Server Sync Model
+                </span>
+              </div>
+
+              <p class="text-sm text-slate-300 mb-6">
+                Test how different network architectures handle saving a Reel when a network drop or cache refresh occurs. Compare <strong>Optimistic UI (Current Behavior)</strong> against a <strong>Confirmed Persistent Write Queue</strong>.
+              </p>
+
+              <!-- Simulator Controls -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label class="block text-xs font-mono uppercase text-slate-400 mb-2">1. Select Sync Architecture</label>
+                  <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-800 border border-slate-700">
+                    <button id="sim-mode-optimistic" type="button" class="py-2 px-3 rounded-lg text-xs font-semibold bg-blue-600 text-white transition cursor-pointer">
+                      Optimistic UI
+                    </button>
+                    <button id="sim-mode-queue" type="button" class="py-2 px-3 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer">
+                      Persistent Queue
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-mono uppercase text-slate-400 mb-2">2. Network Condition</label>
+                  <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-800 border border-slate-700">
+                    <button id="sim-net-loss" type="button" class="py-2 px-3 rounded-lg text-xs font-semibold bg-amber-600 text-white transition cursor-pointer">
+                      Packet Drop / App Close
+                    </button>
+                    <button id="sim-net-healthy" type="button" class="py-2 px-3 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer">
+                      Stable Connection
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Visual State Pipeline -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- Client App UI -->
+                <div class="rounded-2xl bg-slate-800/80 border border-slate-700 p-4 text-center">
+                  <div class="text-xs font-mono text-slate-400 mb-2">MOBILE CLIENT UI</div>
+                  <div id="sim-client-icon" class="w-12 h-12 mx-auto rounded-xl bg-slate-700 flex items-center justify-center text-slate-400 mb-2 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                  </div>
+                  <div id="sim-client-status" class="text-sm font-bold text-slate-200">Unsaved (Hollow)</div>
+                </div>
+
+                <!-- Network / Queue Channel -->
+                <div class="rounded-2xl bg-slate-800/80 border border-slate-700 p-4 flex flex-col items-center justify-center text-center">
+                  <div class="text-xs font-mono text-slate-400 mb-2">NETWORK / SYNC LAYER</div>
+                  <div id="sim-packet-badge" class="px-3 py-1.5 rounded-lg font-mono text-xs bg-slate-700 text-slate-300 mb-2">
+                    Idle — Ready to Save
+                  </div>
+                  <div class="text-[11px] text-slate-400" id="sim-queue-info">No pending retry jobs</div>
+                </div>
+
+                <!-- Remote Database -->
+                <div class="rounded-2xl bg-slate-800/80 border border-slate-700 p-4 text-center">
+                  <div class="text-xs font-mono text-slate-400 mb-2">REMOTE SERVER DB</div>
+                  <div id="sim-db-icon" class="w-12 h-12 mx-auto rounded-xl bg-slate-700 flex items-center justify-center text-slate-400 mb-2 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                  </div>
+                  <div id="sim-db-status" class="text-sm font-bold text-slate-200">Record: NULL</div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex flex-wrap items-center gap-3 mb-5">
+                <button id="sim-run-save" type="button" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-sm transition cursor-pointer">
+                  1. Tap Bookmark Icon
+                </button>
+                <button id="sim-run-refresh" type="button" class="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold transition cursor-pointer">
+                  2. Simulate Cache Refresh (3 Days Later)
+                </button>
+                <button id="sim-reset" type="button" class="ml-auto px-3.5 py-2.5 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-xs font-mono transition cursor-pointer">
+                  Reset
+                </button>
+              </div>
+
+              <!-- Event Console Log -->
+              <div class="rounded-xl bg-black/60 border border-slate-800 p-3.5 font-mono text-xs text-slate-300 space-y-1.5 max-h-36 overflow-y-auto" id="sim-console">
+                <div class="text-slate-500">&gt; Simulator initialized. Click "1. Tap Bookmark Icon" to begin...</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- SECTION 5: How Users Can Protect Their Saved Reels -->
+          <section id="actionable-fixes" class="scroll-mt-24 pt-2">
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-4">
+              4. How to Stop Losing Your Saved Reels Right Now
+            </h2>
+            <p class="mb-4">
+              Until social platforms adopt persistent write-ahead queues and confirmation snackbars for un-saving, you can protect important Reels using three practical habits:
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div class="font-bold text-slate-900 dark:text-white text-sm mb-1.5">1. Save to a Named Collection</div>
+                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  Tap <strong>"Save to collection"</strong> when the popup appears. Assigning a Reel to a named folder forces a secondary API write request, reducing silent drops.
+                </p>
+              </div>
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div class="font-bold text-slate-900 dark:text-white text-sm mb-1.5">2. Wait 2 Seconds Before Closing</div>
+                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  Avoid immediately force-closing Instagram right after bookmarking a Reel so the background <code class="font-mono text-xs">HTTP POST</code> finishes committing.
+                </p>
+              </div>
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div class="font-bold text-slate-900 dark:text-white text-sm mb-1.5">3. DM Crucial Links to Yourself</div>
+                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  For must-keep tutorials or references, send the Reel to your own DM thread—message logs use a separate, far more durable database table than bookmarks.
+                </p>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </article>
+
+      <!-- Right Sticky Sidebar (4 cols) -->
+      <aside class="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
+
+        <!-- Table of Contents Card -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+          <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+            In This Investigation
+          </h3>
+          <nav class="space-y-2.5 text-sm font-medium">
+            <a href="#standard-explanations" class="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              1. Conventional Explanations
+            </a>
+            <a href="#contradiction-proof" class="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              2. Forensic Proof (Live Reel)
+            </a>
+            <a href="#cs-root-causes" class="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              3. CS &amp; HCI Root Causes
+            </a>
+            <a href="#interactive-simulator" class="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              4. Interactive Sync Simulator
+            </a>
+            <a href="#actionable-fixes" class="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              5. How to Prevent Data Loss
+            </a>
+          </nav>
+        </div>
+
+        <!-- =====================================================================
+             STICKY SIDEBAR ADSENSE SLOT (300x250 / 300x600 Responsive)
+             ===================================================================== -->
+        <div class="ad-container transition-all duration-300">
+          <div class="rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 ad-slot-pattern p-4">
+            <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 dark:text-slate-500 mb-2">
+              <span>ADVERTISEMENT • SIDEBAR</span>
+              <span>300×250</span>
+            </div>
+            <ins class="adsbygoogle block"
+                 style="display:block"
+                 data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                 data-ad-slot="9988776655"
+                 data-ad-format="rectangle"
+                 data-full-width-responsive="true"></ins>
+            <div class="ad-preview-box rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-800/70 dark:to-slate-900 border border-slate-200 dark:border-slate-700 p-5 text-center space-y-3">
+              <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                Sticky Sidebar Slot
+              </span>
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-mono font-bold">
+                300×250
+              </div>
+              <h4 class="text-sm font-bold text-slate-900 dark:text-white">
+                Monetize Long-Form Readers
+              </h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Stays visible in the viewport as desktop readers scroll through technical deep dives.
+              </p>
+              <button type="button" onclick="openAdSenseModal()" class="w-full py-2 px-3 rounded-xl bg-slate-900 dark:bg-blue-600 text-white text-xs font-semibold hover:opacity-90 transition cursor-pointer">
+                Test Your Publisher ID
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Newsletter / Research Updates Box -->
+        <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 text-white shadow-md">
+          <h3 class="font-bold text-lg mb-1.5">TechState Lab Dispatch</h3>
+          <p class="text-xs text-blue-100 leading-relaxed mb-4">
+            Get weekly computer science breakdowns of hidden platform bugs, UI dark patterns, and distributed system quirks.
+          </p>
+          <form id="newsletter-form" class="space-y-2.5">
+            <input type="email" required placeholder="you@domain.com" class="w-full px-3.5 py-2.5 rounded-xl bg-white/15 border border-white/25 text-white placeholder-blue-200 text-xs focus:outline-none focus:ring-2 focus:ring-white" />
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-white text-blue-700 font-bold text-xs hover:bg-blue-50 transition cursor-pointer">
+              Subscribe Free
+            </button>
+          </form>
+          <p id="newsletter-feedback" class="hidden text-xs text-emerald-200 font-medium mt-2">
+            Subscribed! Welcome to TechState Lab.
+          </p>
+        </div>
+
+      </aside>
+    </div>
+  </main>
+
+  <!-- Footer with AdSense-Required Compliance Pages -->
+  <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-8 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-mono font-bold text-xs">TS</div>
+            <span class="font-extrabold text-base text-slate-900 dark:text-white">TechState Lab</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md">
+            Independent technology journalism, Human-Computer Interaction case studies, and software architecture investigations.
+          </p>
+        </div>
+
+        <!-- Mandatory Google AdSense Policy Links -->
+        <div class="flex flex-wrap gap-4 sm:gap-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <button type="button" onclick="openComplianceModal('privacy')" class="hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer">Privacy Policy</button>
+          <button type="button" onclick="openComplianceModal('terms')" class="hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer">Terms of Service</button>
+          <button type="button" onclick="openComplianceModal('about')" class="hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer">About Us</button>
+          <button type="button" onclick="openComplianceModal('contact')" class="hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer">Contact</button>
+        </div>
+      </div>
+
+      <div class="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 dark:text-slate-500">
+        <p>© 2026 TechState Lab. All rights reserved. Independent research—not affiliated with Meta Platforms, Inc.</p>
+        <p class="font-mono">AdSense Ready • GDPR / Cookie Disclosure Included</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       MODAL 1: GOOGLE ADSENSE SETUP & LIVE PREVIEW STUDIO
+       ===================================================================== -->
+  <div id="adsense-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+            $
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Google AdSense Setup &amp; Preview Studio</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Configure your Publisher ID, toggle ad slots, and copy production HTML.</p>
+          </div>
+        </div>
+        <button id="close-adsense-modal" type="button" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-5">
+        <!-- Toggle Ad Visibility on Page -->
+        <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+          <div>
+            <div class="text-sm font-bold text-slate-900 dark:text-white">Show AdSense Slots on Blog</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">Toggle all 3 ad placements (Leaderboard, In-Article, Sidebar) on or off.</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input id="toggle-ads-checkbox" type="checkbox" checked class="sr-only peer" />
+            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        <!-- Custom Publisher ID & Slot IDs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">AdSense Publisher ID</label>
+            <input id="input-pub-id" type="text" value="ca-pub-XXXXXXXXXXXXXXXX" placeholder="ca-pub-1234567890123456" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Top Leaderboard Slot ID</label>
+            <input id="input-slot-top" type="text" value="1122334455" placeholder="1122334455" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">In-Article Native Slot ID</label>
+            <input id="input-slot-article" type="text" value="6677889900" placeholder="6677889900" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Sidebar Rectangle Slot ID</label>
+            <input id="input-slot-sidebar" type="text" value="9988776655" placeholder="9988776655" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <button id="apply-adsense-config" type="button" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold transition cursor-pointer">
+          Apply IDs to Live Preview
+        </button>
+
+        <!-- Generated Ready-to-Deploy AdSense Code Snippet -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Ready-to-Deploy AdSense HTML Snippet</span>
+            <button id="copy-adsense-code" type="button" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+              Copy Snippet
+            </button>
+          </div>
+          <pre id="adsense-code-output" class="p-3.5 rounded-xl bg-slate-950 text-emerald-400 font-mono text-[11px] overflow-x-auto border border-slate-800 leading-relaxed"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 2: COMPLIANCE PAGES (PRIVACY POLICY, TERMS, ABOUT, CONTACT)
+       ===================================================================== -->
+  <div id="compliance-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-xl w-full max-h-[85vh] overflow-y-auto shadow-2xl p-6 sm:p-8">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
+        <h3 id="compliance-title" class="text-lg font-bold text-slate-900 dark:text-white">Privacy Policy</h3>
+        <button id="close-compliance-modal" type="button" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="compliance-body" class="space-y-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed"></div>
+    </div>
+  </div>
+
+  <!-- Interactive JavaScript -->
+  <script>
+    // 1. Reading Progress Bar
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      document.getElementById('reading-progress').style.width = `${Math.min(100, Math.max(0, progress))}%`;
+    });
+
+    // 2. Dark / Light Mode Toggle
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const htmlEl = document.documentElement;
+    if (localStorage.getItem('techstate-theme') === 'dark' ||
+        (!localStorage.getItem('techstate-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      htmlEl.classList.add('dark');
+    }
+    themeToggleBtn.addEventListener('click', () => {
+      htmlEl.classList.toggle('dark');
+      localStorage.setItem('techstate-theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    // 3. Interactive Bookmark Demo in Forensic Proof Card
+    const demoBookmarkBtn = document.getElementById('demo-bookmark-btn');
+    const demoBookmarkIcon = document.getElementById('demo-bookmark-icon');
+    const demoBookmarkBadge = document.getElementById('demo-bookmark-badge');
+    let demoSaved = false;
+
+    demoBookmarkBtn.addEventListener('click', () => {
+      demoSaved = !demoSaved;
+      if (demoSaved) {
+        demoBookmarkIcon.setAttribute('fill', 'currentColor');
+        demoBookmarkBadge.textContent = 'Saved (Filled)';
+        demoBookmarkBtn.className = 'relative group flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 cursor-pointer';
+      } else {
+        demoBookmarkIcon.setAttribute('fill', 'none');
+        demoBookmarkBadge.textContent = 'Hollow (Unsaved!)';
+        demoBookmarkBtn.className = 'relative group flex items-center gap-1.5 px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 cursor-pointer';
+      }
+    });
+
+    // 4. Interactive Bookmark Persistence Simulator
+    let simMode = 'optimistic'; // 'optimistic' | 'queue'
+    let simNet = 'loss';        // 'loss' | 'healthy'
+    let simClientState = false;
+    let simDbState = false;
+    let simQueued = false;
+
+    const btnModeOptimistic = document.getElementById('sim-mode-optimistic');
+    const btnModeQueue = document.getElementById('sim-mode-queue');
+    const btnNetLoss = document.getElementById('sim-net-loss');
+    const btnNetHealthy = document.getElementById('sim-net-healthy');
+    const simConsole = document.getElementById('sim-console');
+
+    function logSim(msg, colorClass = 'text-slate-300') {
+      const line = document.createElement('div');
+      line.className = colorClass;
+      line.textContent = `> ${msg}`;
+      simConsole.appendChild(line);
+      simConsole.scrollTop = simConsole.scrollHeight;
+    }
+
+    function updateSimulatorUI() {
+      const clientIcon = document.getElementById('sim-client-icon');
+      const clientStatus = document.getElementById('sim-client-status');
+      const dbIcon = document.getElementById('sim-db-icon');
+      const dbStatus = document.getElementById('sim-db-status');
+      const packetBadge = document.getElementById('sim-packet-badge');
+      const queueInfo = document.getElementById('sim-queue-info');
+
+      if (simClientState) {
+        clientIcon.className = 'w-12 h-12 mx-auto rounded-xl bg-blue-600 flex items-center justify-center text-white mb-2 transition-all';
+        clientIcon.querySelector('svg').setAttribute('fill', 'currentColor');
+        clientStatus.textContent = 'Saved (Filled Icon)';
+        clientStatus.className = 'text-sm font-bold text-blue-400';
+      } else {
+        clientIcon.className = 'w-12 h-12 mx-auto rounded-xl bg-slate-700 flex items-center justify-center text-slate-400 mb-2 transition-all';
+        clientIcon.querySelector('svg').setAttribute('fill', 'none');
+        clientStatus.textContent = 'Unsaved (Hollow)';
+        clientStatus.className = 'text-sm font-bold text-slate-300';
+      }
+
+      if (simDbState) {
+        dbIcon.className = 'w-12 h-12 mx-auto rounded-xl bg-emerald-600 flex items-center justify-center text-white mb-2 transition-all';
+        dbStatus.textContent = 'Record: SAVED_OK';
+        dbStatus.className = 'text-sm font-bold text-emerald-400';
+      } else {
+        dbIcon.className = 'w-12 h-12 mx-auto rounded-xl bg-slate-700 flex items-center justify-center text-slate-400 mb-2 transition-all';
+        dbStatus.textContent = 'Record: NULL';
+        dbStatus.className = 'text-sm font-bold text-rose-400';
+      }
+
+      if (simQueued) {
+        packetBadge.textContent = 'Queued Locally (Retrying)';
+        packetBadge.className = 'px-3 py-1.5 rounded-lg font-mono text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 mb-2';
+        queueInfo.textContent = 'Write-ahead log persists across app restarts';
+      } else if (simDbState) {
+        packetBadge.textContent = 'HTTP 200 OK Confirmed';
+        packetBadge.className = 'px-3 py-1.5 rounded-lg font-mono text-xs bg-emerald-500/20 text-emerald-300 mb-2';
+        queueInfo.textContent = 'Client and Server state in sync';
+      } else {
+        packetBadge.textContent = 'No Active Sync';
+        packetBadge.className = 'px-3 py-1.5 rounded-lg font-mono text-xs bg-slate-700 text-slate-300 mb-2';
+        queueInfo.textContent = 'No pending retry jobs';
+      }
+    }
+
+    btnModeOptimistic.addEventListener('click', () => {
+      simMode = 'optimistic';
+      btnModeOptimistic.className = 'py-2 px-3 rounded-lg text-xs font-semibold bg-blue-600 text-white transition cursor-pointer';
+      btnModeQueue.className = 'py-2 px-3 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer';
+      logSim('Switched architecture to Optimistic UI (no local retry queue).', 'text-blue-400');
+    });
+
+    btnModeQueue.addEventListener('click', () => {
+      simMode = 'queue';
+      btnModeQueue.className = 'py-2 px-3 rounded-lg text-xs font-semibold bg-blue-600 text-white transition cursor-pointer';
+      btnModeOptimistic.className = 'py-2 px-3 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer';
+      logSim('Switched architecture to Confirmed Persistent Write Queue.', 'text-cyan-400');
+    });
+
+    btnNetLoss.addEventListener('click', () => {
+      simNet = 'loss';
+      btnNetLoss.className = 'py-2 px-3 rounded-lg text-xs font-semibold bg-amber-600 text-white transition cursor-pointer';
+      btnNetHealthy.className = 'py-2 px-3 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer';
+      logSim('Network set to Packet Drop / Early App Close.', 'text-amber-400');
+    });
+
+    btnNetHealthy.addEventListener('click', () => {
+      simNet = 'healthy';
+      btnNetHealthy.className = 'py-2 px-3 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition cursor-pointer';
+      btnNetLoss.className = 'py-2 px-3 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer';
+      logSim('Network set to Stable Connection.', 'text-emerald-400');
+    });
+
+    document.getElementById('sim-run-save').addEventListener('click', () => {
+      simClientState = true;
+      if (simNet === 'healthy') {
+        simDbState = true;
+        simQueued = false;
+        logSim('POST /api/v1/media/save -> HTTP 200 OK. Bookmark committed to server.', 'text-emerald-400');
+      } else {
+        if (simMode === 'optimistic') {
+          simDbState = false;
+          simQueued = false;
+          logSim('UI turned filled optimistically, BUT packet dropped before server write! No error shown.', 'text-rose-400');
+        } else {
+          simDbState = false;
+          simQueued = true;
+          logSim('Packet dropped, saved safely in local Persistent Write Queue for retry.', 'text-amber-300');
+        }
+      }
+      updateSimulatorUI();
+    });
+
+    document.getElementById('sim-run-refresh').addEventListener('click', () => {
+      if (simQueued) {
+        simQueued = false;
+        simDbState = true;
+        simClientState = true;
+        logSim('App reopened: Persistent Queue flushed pending save to server -> HTTP 200 OK! Bookmark preserved.', 'text-emerald-400');
+      } else if (simClientState && !simDbState) {
+        simClientState = false;
+        logSim('Cache refreshed from server: Server returned Record: NULL. Bookmark silently vanished!', 'text-rose-400');
+      } else if (simClientState && simDbState) {
+        logSim('Cache refreshed: Server confirmed Record: SAVED_OK. Bookmark intact.', 'text-emerald-400');
+      } else {
+        logSim('Cache refreshed: Nothing was saved.', 'text-slate-400');
+      }
+      updateSimulatorUI();
+    });
+
+    document.getElementById('sim-reset').addEventListener('click', () => {
+      simClientState = false;
+      simDbState = false;
+      simQueued = false;
+      simConsole.innerHTML = '<div class="text-slate-500">&gt; Simulator reset. Ready.</div>';
+      updateSimulatorUI();
+    });
+
+    // 5. AdSense Studio Modal & Live Configuration
+    const adsenseModal = document.getElementById('adsense-modal');
+    const toggleAdsCheckbox = document.getElementById('toggle-ads-checkbox');
+    const adStatusPill = document.getElementById('ad-status-pill');
+
+    function openAdSenseModal() {
+      adsenseModal.classList.remove('hidden');
+      adsenseModal.classList.add('flex');
+      refreshAdSenseSnippet();
+    }
+
+    document.getElementById('open-adsense-modal').addEventListener('click', openAdSenseModal);
+    document.getElementById('close-adsense-modal').addEventListener('click', () => {
+      adsenseModal.classList.add('hidden');
+      adsenseModal.classList.remove('flex');
+    });
+
+    toggleAdsCheckbox.addEventListener('change', (e) => {
+      const show = e.target.checked;
+      document.querySelectorAll('.ad-container').forEach(el => {
+        el.style.display = show ? 'block' : 'none';
+      });
+      adStatusPill.textContent = show ? 'ON' : 'OFF';
+      adStatusPill.className = show
+        ? 'hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono uppercase rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+        : 'hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono uppercase rounded bg-slate-500/20 text-slate-600 dark:text-slate-400';
+    });
+
+    function refreshAdSenseSnippet() {
+      const pubId = document.getElementById('input-pub-id').value.trim() || 'ca-pub-XXXXXXXXXXXXXXXX';
+      const slotTop = document.getElementById('input-slot-top').value.trim() || '1122334455';
+      const slotArticle = document.getElementById('input-slot-article').value.trim() || '6677889900';
+      const slotSidebar = document.getElementById('input-slot-sidebar').value.trim() || '9988776655';
+
+      document.getElementById('adsense-code-output').textContent =
+`<!-- 1. Paste inside <head> -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${pubId}" crossorigin="anonymous"><\/script>
+
+<!-- 2. Responsive Display Unit (Top / Sidebar) -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="${pubId}"
+     data-ad-slot="${slotTop}"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});<\/script>
+
+<!-- Slots Configured: Top (${slotTop}), In-Article (${slotArticle}), Sidebar (${slotSidebar}) -->`;
+    }
+
+    document.getElementById('apply-adsense-config').addEventListener('click', () => {
+      const pubId = document.getElementById('input-pub-id').value.trim() || 'ca-pub-XXXXXXXXXXXXXXXX';
+      const slotTop = document.getElementById('input-slot-top').value.trim() || '1122334455';
+      const slotArticle = document.getElementById('input-slot-article').value.trim() || '6677889900';
+      const slotSidebar = document.getElementById('input-slot-sidebar').value.trim() || '9988776655';
+
+      const slots = [slotTop, slotArticle, slotSidebar];
+      document.querySelectorAll('.ad-meta-display').forEach((el, idx) => {
+        el.textContent = `pub: ${pubId} | slot: ${slots[idx] || slotTop}`;
+      });
+      document.querySelectorAll('ins.adsbygoogle').forEach((ins, idx) => {
+        ins.setAttribute('data-ad-client', pubId);
+        ins.setAttribute('data-ad-slot', slots[idx] || slotTop);
+      });
+      refreshAdSenseSnippet();
+      const btn = document.getElementById('apply-adsense-config');
+      btn.textContent = 'Applied to Page Slots!';
+      setTimeout(() => { btn.textContent = 'Apply IDs to Live Preview'; }, 1800);
+    });
+
+    document.getElementById('copy-adsense-code').addEventListener('click', () => {
+      const text = document.getElementById('adsense-code-output').textContent;
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const copyBtn = document.getElementById('copy-adsense-code');
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy Snippet'; }, 1800);
+    });
+
+    // 6. Copy Article Link Button
+    document.getElementById('copy-article-link').addEventListener('click', () => {
+      const ta = document.createElement('textarea');
+      ta.value = window.location.href;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const label = document.getElementById('copy-link-label');
+      label.textContent = 'Link Copied!';
+      setTimeout(() => { label.textContent = 'Copy Article Link'; }, 1800);
+    });
+
+    // 7. Newsletter Form Handler
+    document.getElementById('newsletter-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      e.target.reset();
+      document.getElementById('newsletter-feedback').classList.remove('hidden');
+    });
+
+    // 8. Compliance Modals (AdSense Approval Requirements)
+    const complianceModal = document.getElementById('compliance-modal');
+    const complianceData = {
+      privacy: {
+        title: 'Privacy Policy & Cookie Disclosure',
+        html: `
+          <p><strong>Effective Date:</strong> November 2026</p>
+          <p>TechState Lab respects visitor privacy. This website uses third-party advertising services, including <strong>Google AdSense</strong>, to serve advertisements when you visit our pages.</p>
+          <p><strong>DoubleClick &amp; Advertising Cookies:</strong> Google uses cookies (including the DoubleClick DART cookie) to serve ads based on a user's prior visits to this website or other websites on the Internet. Users may opt out of personalized advertising by visiting <span class="underline text-blue-600 dark:text-blue-400">Google Ads Settings</span>.</p>
+          <p>We do not sell personal email addresses submitted to our newsletter.</p>
+        `
+      },
+      terms: {
+        title: 'Terms of Service',
+        html: `
+          <p>All investigative articles, diagrams, and interactive simulators published on TechState Lab are provided for educational and informational purposes.</p>
+          <p>TechState Lab is an independent publication and is not affiliated with, endorsed by, or sponsored by Meta Platforms, Inc. or Instagram.</p>
+        `
+      },
+      about: {
+        title: 'About TechState Lab',
+        html: `
+          <p><strong>TechState Lab</strong> is an independent computer science and Human-Computer Interaction (HCI) publication dedicated to investigating everyday software bugs, distributed system quirks, and interface design flaws.</p>
+          <p>Our goal is to translate complex backend engineering concepts into clear, reproducible visual case studies.</p>
+        `
+      },
+      contact: {
+        title: 'Contact Editorial Desk',
+        html: `
+          <p>Have a reproducible platform bug, dataset, or research tip to share with our editorial team?</p>
+          <p class="font-mono text-xs p-3 rounded-xl bg-slate-100 dark:bg-slate-800">Editorial Email: contact@techstatelab.example.com</p>
+          <p>Please include device OS, app version, and screenshots when submitting bug reports.</p>
+        `
+      }
+    };
+
+    function openComplianceModal(key) {
+      const item = complianceData[key];
+      if (!item) return;
+      document.getElementById('compliance-title').textContent = item.title;
+      document.getElementById('compliance-body').innerHTML = item.html;
+      complianceModal.classList.remove('hidden');
+      complianceModal.classList.add('flex');
+    }
+
+    document.getElementById('close-compliance-modal').addEventListener('click', () => {
+      complianceModal.classList.add('hidden');
+      complianceModal.classList.remove('flex');
+    });
+
+    // Close modals when clicking backdrop
+    [adsenseModal, complianceModal].forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
